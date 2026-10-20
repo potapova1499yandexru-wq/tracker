@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Мой трекер здоровья & вечерняя йога</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Confetti Canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            sage: {
+              50: '#F4F7F5',
+              100: '#E4EDE6',
+              200: '#C8DBD0',
+              300: '#A4C3AD',
+              400: '#7FA88B',
+              500: '#5F8F6D',
+              600: '#477454',
+              700: '#365940',
+              800: '#26402E',
+            },
+            linen: {
+              50: '#FAF8F5',
+              100: '#F4EEE5',
+              200: '#E9DECf',
+              300: '#D6C4AC',
+            },
+            blush: {
+              50: '#FDF7F7',
+              100: '#FAECEB',
+              200: '#F5D7D5',
+              400: '#E59B96',
+              500: '#D67D77',
+            }
+          },
+          boxShadow: {
+            'soft': '0 10px 30px -5px rgba(80, 70, 60, 0.05)',
+            'card': '0 2px 16px -2px rgba(60, 50, 40, 0.04)',
+            'pill': '0 4px 16px -2px rgba(71, 116, 84, 0.2)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+    }
+    @keyframes checkPop {
+      0% { transform: scale(0.8); }
+      55% { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+    .check-pop {
+      animation: checkPop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    .pulse-glow {
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[#FAF8F5] text-stone-700 min-h-full font-sans antialiased selection:bg-sage-200 selection:text-sage-800 pb-16">
+
+  <!-- Мягкий декоративный пастельный фон -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-24 -right-24 w-96 h-96 bg-sage-100/60 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -left-24 w-80 h-80 bg-blush-100/40 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-24 right-8 w-96 h-96 bg-linen-100/70 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 max-w-md mx-auto px-4 sm:px-6 pt-5">
+
+    <!-- Верхняя статус-панель: индикатор сохранения и быстрые кнопки -->
+    <header class="flex items-center justify-between gap-2 mb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-sage-700 bg-sage-100/80 px-2.5 py-0.5 rounded-full border border-sage-200/60">
+            <i data-lucide="sparkles" class="w-3 h-3 text-sage-600"></i> Daily Wellness
+          </span>
+          <!-- Статус синхронизации и автосохранения -->
+          <span id="syncStatusBadge" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-500 bg-white/90 px-2.5 py-0.5 rounded-full border border-stone-200 shadow-sm transition-all duration-300">
+            <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="syncStatusText">Сохранено</span>
+          </span>
+        </div>
+        <h1 class="text-2xl font-serif font-semibold text-stone-800 mt-1">Витамины & Йога</h1>
+      </div>
+
+      <!-- Кнопки управления -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Бэкап / Экспорт / Импорт -->
+        <button onclick="openBackupModal()" title="Резервная копия и восстановление" class="w-9 h-9 rounded-full bg-white/90 border border-stone-200 hover:border-sage-300 text-stone-600 hover:text-stone-900 flex items-center justify-center transition shadow-sm active:scale-95">
+          <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
+        </button>
+        <!-- Звук -->
+        <button id="soundToggleBtn" onclick="toggleSound()" title="Включить / Выключить звук" class="w-9 h-9 rounded-full bg-white/90 border border-stone-200 hover:border-sage-300 text-stone-600 flex items-center justify-center transition shadow-sm active:scale-95">
+          <i id="soundIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+        <!-- Сброс дня -->
+        <button onclick="requestResetCurrentDay()" title="Очистить выбранный день" class="w-9 h-9 rounded-full bg-white/90 border border-stone-200 hover:border-rose-300 text-stone-500 hover:text-rose-500 flex items-center justify-center transition shadow-sm active:scale-95">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Навигатор по дням и мини-календарь недели -->
+    <section class="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-stone-200/70 shadow-sm mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1">
+          <button onclick="changeDay(-1)" title="Предыдущий день" class="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-stone-100 text-stone-600 transition active:scale-90">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <button onclick="setRelativeDay(-1)" class="px-2 py-1 rounded-lg text-xs font-medium text-stone-500 hover:bg-stone-100 transition">Вчера</button>
+          <button onclick="goToToday()" class="px-2 py-1 rounded-lg text-xs font-semibold text-sage-700 bg-sage-50 hover:bg-sage-100 transition border border-sage-200/60">Сегодня</button>
+        </div>
+
+        <div class="text-right">
+          <div id="currentDateDisplay" class="font-semibold text-stone-800 capitalize text-sm sm:text-base leading-tight">Сегодня</div>
+          <div id="currentFullDate" class="text-[11px] text-stone-400 font-medium">1 января 2026</div>
+        </div>
+
+        <button onclick="changeDay(1)" title="Следующий день" class="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-stone-100 text-stone-600 transition active:scale-90">
+          <i data-lucide="chevron-right" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Недельная полоса (7 дней) с индикаторами статуса -->
+      <div id="weekStrip" class="grid grid-cols-7 gap-1 pt-2.5 border-t border-stone-100">
+        <!-- Генерируется программно -->
+      </div>
+    </section>
+
+    <!-- Сводка прогресса за день -->
+    <section class="relative overflow-hidden bg-gradient-to-br from-white via-white to-sage-50/60 rounded-3xl p-5 border border-sage-100 shadow-soft mb-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <span class="text-[11px] text-stone-400 font-medium uppercase tracking-wider">Прогресс за день</span>
+          <div class="flex items-baseline gap-1.5 mt-0.5">
+            <span id="pillsCountText" class="text-2xl font-bold text-stone-800">0</span>
+            <span class="text-sm font-medium text-stone-400">/ 7 выполнено</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <span id="progressPercent" class="text-2xl font-bold text-sage-600">0%</span>
+        </div>
+      </div>
+
+      <!-- Индикатор заполнения -->
+      <div class="w-full bg-stone-100 h-2.5 rounded-full mt-3.5 overflow-hidden p-0.5 border border-stone-200/40">
+        <div id="progressBar" class="bg-gradient-to-r from-sage-400 to-sage-600 h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+      </div>
+
+      <!-- Мотивирующая подсказка -->
+      <p id="motivationText" class="text-xs text-stone-500 mt-3 font-normal leading-relaxed flex items-center gap-1.5">
+        <i data-lucide="heart" class="w-3.5 h-3.5 text-blush-400 inline"></i>
+        Начните день с мягкой заботы о своем здоровье
+      </p>
+    </section>
+
+    <!-- Списки карточек по времени суток -->
+    <main class="space-y-5" id="scheduleContainer">
+
+      <!-- 1. УТРО -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-amber-100/80 text-amber-600 flex items-center justify-center">
+              <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+            </span>
+            <h2 class="text-sm font-semibold tracking-wide text-stone-700">Утро</h2>
+          </div>
+          <span id="morningCounterBadge" class="text-[11px] font-medium text-stone-400 bg-white px-2 py-0.5 rounded-full border border-stone-200/70">0/3</span>
+        </div>
+        <div class="space-y-2" id="morningList"></div>
+      </div>
+
+      <!-- 2. ДЕНЬ -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-sage-100 text-sage-600 flex items-center justify-center">
+              <i data-lucide="cloud-sun" class="w-3.5 h-3.5"></i>
+            </span>
+            <h2 class="text-sm font-semibold tracking-wide text-stone-700">День</h2>
+          </div>
+          <span id="afternoonCounterBadge" class="text-[11px] font-medium text-stone-400 bg-white px-2 py-0.5 rounded-full border border-stone-200/70">0/1</span>
+        </div>
+        <div class="space-y-2" id="afternoonList"></div>
+      </div>
+
+      <!-- 3. ВЕЧЕР -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center">
+              <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+            </span>
+            <h2 class="text-sm font-semibold tracking-wide text-stone-700">Вечер</h2>
+          </div>
+          <span id="eveningCounterBadge" class="text-[11px] font-medium text-stone-400 bg-white px-2 py-0.5 rounded-full border border-stone-200/70">0/3</span>
+        </div>
+        <div class="space-y-2" id="eveningList"></div>
+      </div>
+
+    </main>
+
+    <!-- Полезные советы -->
+    <div class="mt-8 bg-white/80 border border-stone-200/70 rounded-2xl p-4 text-xs text-stone-500 flex items-start gap-3 shadow-sm">
+      <div class="p-2 rounded-xl bg-sage-50 text-sage-600 shrink-0">
+        <i data-lucide="shield-check" class="w-4 h-4"></i>
+      </div>
+      <div class="leading-relaxed">
+        <span class="font-semibold text-stone-700 block mb-0.5">Сохранение гарантировано:</span>
+        Все ваши отметки, точное время приёма и выполненная йога сохраняются мгновенно. Перезагрузка страницы или закрытие браузера не сбросят историю!
+      </div>
+    </div>
+
+    <footer class="mt-8 text-center text-xs text-stone-400 pb-2">
+      Красота изнутри • Забота о здоровье каждый день
+    </footer>
+
+  </div>
+
+  <!-- Модальное окно: Таймер практики вечерней йоги -->
+  <div id="yogaTimerModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full border border-sage-100 shadow-xl transform scale-95 transition-transform duration-300 text-center" id="yogaModalContent">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-xs font-semibold tracking-wider uppercase text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-emerald-200/60">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Практика & Релакс
+        </span>
+        <button onclick="closeYogaTimer()" class="w-8 h-8 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 flex items-center justify-center transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <h3 class="text-xl font-serif font-semibold text-stone-800">Вечерняя йога</h3>
+      <p class="text-xs text-stone-500 mt-1">Мягкая растяжка, глубокое дыхание и расслабление мышц перед сном</p>
+
+      <!-- Пресеты времени -->
+      <div class="grid grid-cols-3 gap-2 mt-5">
+        <button onclick="selectYogaDuration(15)" id="presetBtn15" class="py-2 px-3 rounded-xl border border-stone-200 text-xs font-medium text-stone-600 transition hover:border-emerald-400 active:scale-95">15 мин</button>
+        <button onclick="selectYogaDuration(30)" id="presetBtn30" class="py-2 px-3 rounded-xl border border-stone-200 text-xs font-medium text-stone-600 transition hover:border-emerald-400 active:scale-95">30 мин</button>
+        <button onclick="selectYogaDuration(45)" id="presetBtn45" class="py-2 px-3 rounded-xl border border-stone-200 text-xs font-medium text-stone-600 transition hover:border-emerald-400 active:scale-95">45 мин</button>
+      </div>
+
+      <!-- Табло таймера -->
+      <div class="my-5 py-4 px-6 bg-sage-50/60 rounded-2xl border border-sage-100 flex flex-col items-center justify-center">
+        <span id="yogaTimerCountdown" class="text-4xl font-mono font-bold text-stone-800 tracking-wider">15:00</span>
+        <span id="yogaTimerStatus" class="text-[11px] text-stone-400 mt-1 uppercase tracking-wider font-medium">Готово к началу</span>
+      </div>
+
+      <!-- Кнопки управления таймером -->
+      <div class="flex items-center justify-center gap-3">
+        <button onclick="toggleYogaTimerPlay()" id="yogaPlayBtn" class="flex-1 py-3 px-4 rounded-xl bg-sage-600 hover:bg-sage-700 text-white font-medium text-sm transition shadow-sm flex items-center justify-center gap-2 active:scale-95">
+          <i id="yogaPlayIcon" data-lucide="play" class="w-4 h-4 fill-white"></i>
+          <span id="yogaPlayText">Начать практику</span>
+        </button>
+        <button onclick="resetYogaTimer()" title="Сбросить время" class="w-11 h-11 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-500 flex items-center justify-center transition active:scale-95">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Быстрая отметка -->
+      <button onclick="completeYogaFromTimer()" class="w-full mt-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 text-xs font-medium transition flex items-center justify-center gap-1.5 active:scale-95">
+        <i data-lucide="check" class="w-3.5 h-3.5"></i> Завершить и сохранить отметку
+      </button>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Резервное копирование и Восстановление данных -->
+  <div id="backupModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full border border-stone-200 shadow-xl transform scale-95 transition-transform duration-300" id="backupModalContent">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-lg font-serif font-semibold text-stone-800">Резервные копии</h3>
+        <button onclick="closeBackupModal()" class="w-8 h-8 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 flex items-center justify-center transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-stone-500 mb-4 leading-relaxed">
+        Вы можете сохранить файл со всей историей на телефон/компьютер или восстановить сохраненные данные.
+      </p>
+
+      <div class="space-y-3">
+        <!-- Кнопка экспорта -->
+        <button onclick="exportDataToFile()" class="w-full py-2.5 px-4 rounded-xl bg-sage-50 hover:bg-sage-100 border border-sage-200 text-sage-800 text-xs font-semibold transition flex items-center justify-center gap-2 active:scale-95">
+          <i data-lucide="download" class="w-4 h-4"></i> Скачать копию в файл (JSON)
+        </button>
+
+        <!-- Кнопка импорта -->
+        <div>
+          <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="handleFileImport(event)">
+          <button onclick="document.getElementById('backupFileInput').click()" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-xs font-medium transition flex items-center justify-center gap-2 active:scale-95">
+            <i data-lucide="upload" class="w-4 h-4"></i> Загрузить из файла (JSON)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Кастомное модальное окно подтверждения сброса (Никаких браузерных confirm!) -->
+  <div id="confirmResetModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl p-6 max-w-xs w-full border border-stone-200 shadow-xl text-center transform scale-95 transition-transform duration-300" id="confirmResetContent">
+      <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-semibold text-stone-800">Очистить текущий день?</h3>
+      <p class="text-xs text-stone-500 mt-1 leading-relaxed">
+        Все отметки и время за выбранную дату будут сброшены. Это действие нельзя отменить.
+      </p>
+      <div class="flex items-center gap-2 mt-5">
+        <button onclick="closeConfirmResetModal()" class="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-medium transition">
+          Отмена
+        </button>
+        <button onclick="confirmResetCurrentDay()" class="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-medium transition shadow-sm">
+          Да, сбросить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Всплывающий тост (Уведомление) -->
+  <div id="toastNotification" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-800/90 backdrop-blur-md text-white text-xs px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 z-50 flex items-center gap-2">
+    <i data-lucide="check" class="w-3.5 h-3.5 text-sage-300"></i>
+    <span id="toastMessage">Отметка сохранена</span>
+  </div>
+
+  <!-- ========================================================================== -->
+  <!-- МОДУЛЬ FIREBASE (При наличии конфигурации) + ЛОКАЛЬНЫЙ FALLBACK           -->
+  <!-- ========================================================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let auth = null;
+    let db = null;
+    let userId = null;
+    let isCloudReady = false;
+
+    async function initCloudSync() {
+      try {
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pill-tracker-app';
+        const hasFirebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config;
+
+        if (!hasFirebaseConfig) {
+          window.appStorage.setCloudStatus('local');
+          return;
+        }
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Аутентификация перед любыми запросами
+        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        if (initialToken) {
+          await signInWithCustomToken(auth, initialToken);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        userId = auth.currentUser?.uid || 'user-offline';
+        if (!userId) return;
+
+        isCloudReady = true;
+        window.appStorage.setCloudStatus('cloud');
+
+        // Подписка на коллекцию пользователя по строгому пути
+        const userDaysCol = collection(db, 'artifacts', appId, 'users', userId, 'pill_records');
+        onSnapshot(userDaysCol, (snapshot) => {
+          let updatedAny = false;
+          snapshot.forEach((docSnap) => {
+            const dateKey = docSnap.id;
+            const data = docSnap.data();
+            if (data && data.items) {
+              window.appStorage.mergeFromCloud(dateKey, data.items);
+              updatedAny = true;
+            }
+          });
+          if (updatedAny) {
+            window.appStorage.refreshUI();
+          }
+        }, (err) => {
+          console.warn('Облачная синхронизация работает в локальном режиме:', err);
+          window.appStorage.setCloudStatus('local');
+        });
+
+      } catch (err) {
+        console.warn('Переход в автономный режим хранилища:', err);
+        window.appStorage.setCloudStatus('local');
+      }
+    }
+
+    // Сохранение дня в облако
+    window.cloudSaveDay = async function(dateKey, dayItems) {
+      if (!isCloudReady || !db || !userId) return;
+      try {
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pill-tracker-app';
+        const dayDocRef = doc(db, 'artifacts', appId, 'users', userId, 'pill_records', dateKey);
+        await setDoc(dayDocRef, {
+          items: dayItems,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Не удалось отправить в облако, сохранено локально:', e);
+      }
+    };
+
+    initCloudSync();
+  </script>
+
+  <!-- ========================================================================== -->
+  <!-- ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ: ХРАНИЛИЩЕ, ИНТЕРФЕЙС, ТАЙМЕР И ЗВУКИ           -->
+  <!-- ========================================================================== -->
+  <script>
+    /* Расписание из 7 пунктов */
+    const PILL_SCHEDULE = [
+      // Утро (3)
+      {
+        id: 'morning_multi',
+        period: 'morning',
+        name: 'Женские витамины',
+        dose: '1 таб.',
+        note: 'Во время завтрака',
+        badge: 'Комплекс',
+        tagColor: 'bg-blush-50 text-blush-500 border-blush-200',
+        icon: 'sparkles'
+      },
+      {
+        id: 'morning_d3',
+        period: 'morning',
+        name: 'Витамин D3',
+        dose: '1 капс.',
+        note: 'С жиросодержащей едой (масло, яйца, авокадо)',
+        badge: 'Иммунитет',
+        tagColor: 'bg-amber-50 text-amber-600 border-amber-200',
+        icon: 'sun'
+      },
+      {
+        id: 'morning_pantogar',
+        period: 'morning',
+        name: 'Пантогар',
+        dose: '1 таб.',
+        note: 'Во время завтрака, запить водой',
+        badge: 'Волосы и ногти',
+        tagColor: 'bg-sage-50 text-sage-600 border-sage-200',
+        icon: 'shield-check'
+      },
+      // День (1)
+      {
+        id: 'afternoon_pantogar',
+        period: 'afternoon',
+        name: 'Пантогар',
+        dose: '1 таб.',
+        note: 'Во время основного обеда',
+        badge: 'Дневная доза',
+        tagColor: 'bg-sage-50 text-sage-600 border-sage-200',
+        icon: 'shield-check'
+      },
+      // Вечер (3)
+      {
+        id: 'evening_pantogar',
+        period: 'evening',
+        name: 'Пантогар',
+        dose: '1 таб.',
+        note: 'Во время ужина',
+        badge: 'Вечерняя доза',
+        tagColor: 'bg-sage-50 text-sage-600 border-sage-200',
+        icon: 'shield-check'
+      },
+      {
+        id: 'evening_magnesium',
+        period: 'evening',
+        name: 'Магний',
+        dose: '1 таб.',
+        note: 'За 30-60 минут до сна для расслабления мышц',
+        badge: 'Сон и нервы',
+        tagColor: 'bg-indigo-50 text-indigo-500 border-indigo-200',
+        icon: 'moon'
+      },
+      {
+        id: 'evening_yoga',
+        period: 'evening',
+        name: 'Физические упражнения: йога',
+        dose: '15–45 мин',
+        note: 'Вечерний стретчинг, дыхание и релаксация',
+        badge: 'Тело & баланс',
+        tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: 'sparkles',
+        isYoga: true
+      }
+    ];
+
+    const MOTIVATION_QUOTES = {
+      0: 'Начните день с мягкой заботы о своем здоровье ✨',
+      1: 'Прекрасное начало! Тело скажет вам спасибо 🌱',
+      2: 'Отличный темп, забота о себе в действии 💧',
+      3: 'Утро закрыто, энергия наполняет вас! 🌿',
+      4: 'Обед позади, дневная норма соблюдена 🌸',
+      5: 'Уверенный шаг к сиянию и здоровью ✨',
+      6: 'Осталась одна вечерняя практика для души и тела 🌙',
+      7: 'Все 7 целей дня выполнены! Полная гармония и покой 🧘‍♀️💖'
+    };
+
+    /* ==========================================================================
+       ОТКАЗОУСТОЙЧИВОЕ ХРАНИЛИЩЕ ДАННЫХ (In-Memory + LocalStorage + Cloud)
+       ========================================================================== */
+    const STORAGE_KEY = 'pill_tracker_persistent_store_v2';
+    let memoryStore = {};
+
+    function safeLoadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          memoryStore = JSON.parse(raw);
+        }
+      } catch (err) {
+        console.warn('Локальное хранилище недоступно в песочнице, используется in-memory кэш', err);
+      }
+    }
+
+    function safeSaveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryStore));
+      } catch (err) {
+        console.warn('Не удалось записать в localStorage', err);
+      }
+    }
+
+    // Экспорт API хранилища для глобального доступа и облачной синхронизации
+    window.appStorage = {
+      getAll: () => memoryStore,
+      getDay: (dateKey) => memoryStore[dateKey] || {},
+      setDayItem: (dateKey, pillId, data) => {
+        if (!memoryStore[dateKey]) memoryStore[dateKey] = {};
+        if (data) {
+          memoryStore[dateKey][pillId] = data;
+        } else {
+          delete memoryStore[dateKey][pillId];
+        }
+        safeSaveToStorage();
+        if (window.cloudSaveDay) {
+          window.cloudSaveDay(dateKey, memoryStore[dateKey]);
+        }
+        window.appStorage.flashSavedIndicator();
+      },
+      clearDay: (dateKey) => {
+        if (memoryStore[dateKey]) {
+          delete memoryStore[dateKey];
+          safeSaveToStorage();
+          if (window.cloudSaveDay) {
+            window.cloudSaveDay(dateKey, {});
+          }
+        }
+      },
+      mergeFromCloud: (dateKey, items) => {
+        memoryStore[dateKey] = items || {};
+        safeSaveToStorage();
+      },
+      refreshUI: () => {
+        renderDateHeaders();
+        renderWeekStrip();
+        renderPills();
+      },
+      setCloudStatus: (mode) => {
+        const dot = document.getElementById('syncStatusDot');
+        const text = document.getElementById('syncStatusText');
+        if (!dot || !text) return;
+        if (mode === 'cloud') {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+          text.textContent = 'Облако активно';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-sage-500';
+          text.textContent = 'Сохранено';
+        }
+      },
+      flashSavedIndicator: () => {
+        const badge = document.getElementById('syncStatusBadge');
+        if (!badge) return;
+        badge.classList.add('ring-2', 'ring-emerald-400/50', 'bg-emerald-50');
+        setTimeout(() => {
+          badge.classList.remove('ring-2', 'ring-emerald-400/50', 'bg-emerald-50');
+        }, 800);
+      }
+    };
+
+    // Загрузка данных при инициализации
+    safeLoadFromStorage();
+
+    /* ==========================================================================
+       УПРАВЛЕНИЕ ДАТАМИ
+       ========================================================================== */
+    let currentDate = new Date();
+
+    function getDateKey(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function changeDay(delta) {
+      currentDate.setDate(currentDate.getDate() + delta);
+      refreshView();
+    }
+
+    function setRelativeDay(delta) {
+      currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() + delta);
+      refreshView();
+    }
+
+    function goToToday() {
+      currentDate = new Date();
+      refreshView();
+      showToast('Сегодняшний день');
+    }
+
+    function selectDate(d) {
+      currentDate = new Date(d);
+      refreshView();
+    }
+
+    function refreshView() {
+      renderDateHeaders();
+      renderWeekStrip();
+      renderPills();
+    }
+
+    /* ==========================================================================
+       ЗВУКОВЫЕ ЭФФЕКТЫ ЧЕРЕЗ WEB AUDIO API (Без внешних mp3)
+       ========================================================================== */
+    let isSoundEnabled = true;
+    try {
+      const soundPref = localStorage.getItem('pill_tracker_sound_v1');
+      if (soundPref !== null) isSoundEnabled = soundPref === 'true';
+    } catch(e){}
+
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playCheckChime() {
+      if (!isSoundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(659.25, now); // E5
+        osc.frequency.exponentialRampToValueAtTime(987.77, now + 0.12); // B5
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } catch (e) {}
+    }
+
+    function playGongSound() {
+      if (!isSoundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        // Насыщенные гармоники тибетской поющей чаши
+        const freqs = [261.63, 523.25, 784.88, 1046.5];
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          const volume = 0.14 / (idx + 1);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(volume, now + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.4);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 3.4);
+        });
+      } catch (e) {}
+    }
+
+    function playCelebrationChord() {
+      if (!isSoundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const chord = [523.25, 659.25, 783.99, 1046.50];
+        chord.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.08);
+
+          gain.gain.setValueAtTime(0.001, now + i * 0.08);
+          gain.gain.linearRampToValueAtTime(0.12, now + i * 0.08 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.9);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.95);
+        });
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      isSoundEnabled = !isSoundEnabled;
+      try { localStorage.setItem('pill_tracker_sound_v1', String(isSoundEnabled)); } catch(e){}
+      updateSoundButtonUI();
+      showToast(isSoundEnabled ? 'Звук включен' : 'Звук выключен');
+    }
+
+    function updateSoundButtonUI() {
+      const icon = document.getElementById('soundIcon');
+      const btn = document.getElementById('soundToggleBtn');
+      if (isSoundEnabled) {
+        icon.setAttribute('data-lucide', 'volume-2');
+        btn.classList.remove('text-stone-300');
+        btn.classList.add('text-stone-600');
+      } else {
+        icon.setAttribute('data-lucide', 'volume-x');
+        btn.classList.add('text-stone-300');
+        btn.classList.remove('text-stone-600');
+      }
+      lucide.createIcons();
+    }
+
+    /* ==========================================================================
+       РЕНДЕРИНГ ИНТЕРФЕЙСА
+       ========================================================================== */
+    function renderDateHeaders() {
+      const todayKey = getDateKey(new Date());
+      const selectedKey = getDateKey(currentDate);
+
+      const displayElem = document.getElementById('currentDateDisplay');
+      const fullDateElem = document.getElementById('currentFullDate');
+
+      const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+      const monthNames = [
+        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+      ];
+
+      if (todayKey === selectedKey) {
+        displayElem.textContent = 'Сегодня';
+      } else {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (getDateKey(yesterday) === selectedKey) {
+          displayElem.textContent = 'Вчера';
+        } else {
+          displayElem.textContent = dayNames[currentDate.getDay()];
+        }
+      }
+
+      fullDateElem.textContent = `${currentDate.getDate()} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()} г.`;
+    }
+
+    function renderWeekStrip() {
+      const container = document.getElementById('weekStrip');
+      container.innerHTML = '';
+      const allRecords = window.appStorage.getAll();
+
+      const days = [];
+      for (let offset = -3; offset <= 3; offset++) {
+        const d = new Date(currentDate);
+        d.setDate(currentDate.getDate() + offset);
+        days.push(d);
+      }
+
+      const todayKey = getDateKey(new Date());
+      const selectedKey = getDateKey(currentDate);
+      const dayNamesShort = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+      days.forEach(d => {
+        const dKey = getDateKey(d);
+        const dayRecord = allRecords[dKey] || {};
+        const completedCount = Object.keys(dayRecord).length;
+        const isSelected = dKey === selectedKey;
+        const isToday = dKey === todayKey;
+
+        let dotClass = 'bg-stone-200';
+        if (completedCount === PILL_SCHEDULE.length) {
+          dotClass = 'bg-sage-500';
+        } else if (completedCount > 0) {
+          dotClass = 'bg-amber-400';
+        }
+
+        const button = document.createElement('button');
+        button.onclick = () => selectDate(d);
+        button.className = `flex flex-col items-center py-2 px-1 rounded-xl transition duration-150 ${
+          isSelected
+            ? 'bg-sage-600 text-white shadow-sm ring-2 ring-sage-600/30 font-medium'
+            : isToday
+              ? 'bg-sage-100/70 text-sage-800'
+              : 'hover:bg-stone-100 text-stone-600'
+        }`;
+
+        button.innerHTML = `
+          <span class="text-[10px] tracking-tight uppercase ${isSelected ? 'text-sage-100' : 'text-stone-400'}">${dayNamesShort[d.getDay()]}</span>
+          <span class="text-sm font-semibold my-0.5">${d.getDate()}</span>
+          <span class="w-1.5 h-1.5 rounded-full ${isSelected ? (completedCount === 7 ? 'bg-white' : 'bg-sage-200') : dotClass}"></span>
+        `;
+        container.appendChild(button);
+      });
+    }
+
+    function createCardElement(pill, isChecked, checkTime) {
+      const card = document.createElement('div');
+      card.className = `group relative flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer select-none ${
+        isChecked
+          ? 'bg-white/70 border-sage-200/90 shadow-sm opacity-95'
+          : 'bg-white border-stone-200/80 hover:border-sage-300 hover:shadow-card'
+      }`;
+
+      card.onclick = () => toggleItem(pill.id);
+
+      const timeBadge = isChecked && checkTime
+        ? `<span class="inline-flex items-center gap-1 text-[11px] font-medium text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full mt-1 border border-sage-200/60">
+             <i data-lucide="check" class="w-3 h-3 text-sage-600"></i> Принято в ${checkTime}
+           </span>`
+        : `<span class="text-[11px] text-stone-400 mt-1 block leading-snug">${pill.note}</span>`;
+
+      const yogaButtonHtml = pill.isYoga
+        ? `<div class="mt-2.5">
+             <button type="button" onclick="openYogaTimer(event)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95 shadow-sm">
+               <i data-lucide="timer" class="w-3.5 h-3.5 text-emerald-600"></i> Таймер практики (15/30/45 мин)
+             </button>
+           </div>`
+        : '';
+
+      card.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0 pr-2">
+          <!-- Чекбокс -->
+          <div class="w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 ${
+            isChecked
+              ? 'bg-sage-600 text-white check-pop shadow-pill'
+              : 'border-2 border-stone-300 group-hover:border-sage-400 bg-stone-50/50'
+          }">
+            <i data-lucide="check" class="w-4 h-4 stroke-[2.5] ${isChecked ? 'block' : 'hidden'}"></i>
+          </div>
+
+          <!-- Название и дозировка -->
+          <div class="truncate">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm font-semibold text-stone-800 tracking-tight transition ${isChecked ? 'line-through text-stone-400' : ''}">
+                ${pill.name}
+              </h3>
+              <span class="text-[10px] px-1.5 py-0.5 rounded border font-medium ${pill.tagColor}">
+                ${pill.dose}
+              </span>
+            </div>
+            ${timeBadge}
+            ${yogaButtonHtml}
+          </div>
+        </div>
+
+        <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isChecked ? 'text-sage-500 bg-sage-50' : 'text-stone-300 bg-stone-50'}">
+          <i data-lucide="${pill.icon}" class="w-4 h-4"></i>
+        </div>
+      `;
+
+      return card;
+    }
+
+    function renderPills() {
+      const selectedKey = getDateKey(currentDate);
+      const dayData = window.appStorage.getDay(selectedKey);
+
+      const morningList = document.getElementById('morningList');
+      const afternoonList = document.getElementById('afternoonList');
+      const eveningList = document.getElementById('eveningList');
+
+      morningList.innerHTML = '';
+      afternoonList.innerHTML = '';
+      eveningList.innerHTML = '';
+
+      let mCount = 0, aCount = 0, eCount = 0;
+
+      PILL_SCHEDULE.forEach(pill => {
+        const item = dayData[pill.id];
+        const isChecked = !!(item && item.completed);
+        const checkTime = item ? item.time : null;
+
+        if (isChecked) {
+          if (pill.period === 'morning') mCount++;
+          if (pill.period === 'afternoon') aCount++;
+          if (pill.period === 'evening') eCount++;
+        }
+
+        const card = createCardElement(pill, isChecked, checkTime);
+
+        if (pill.period === 'morning') morningList.appendChild(card);
+        else if (pill.period === 'afternoon') afternoonList.appendChild(card);
+        else if (pill.period === 'evening') eveningList.appendChild(card);
+      });
+
+      document.getElementById('morningCounterBadge').textContent = `${mCount}/3`;
+      document.getElementById('afternoonCounterBadge').textContent = `${aCount}/1`;
+      document.getElementById('eveningCounterBadge').textContent = `${eCount}/3`;
+
+      const totalChecked = Object.keys(dayData).length;
+      updateProgressBar(totalChecked);
+
+      lucide.createIcons();
+    }
+
+    function updateProgressBar(count) {
+      const total = PILL_SCHEDULE.length; // 7
+      const percent = Math.round((count / total) * 100);
+
+      document.getElementById('pillsCountText').textContent = count;
+      document.getElementById('progressPercent').textContent = `${percent}%`;
+      document.getElementById('progressBar').style.width = `${percent}%`;
+
+      const quoteEl = document.getElementById('motivationText');
+      quoteEl.innerHTML = `
+        <i data-lucide="${count === total ? 'award' : 'heart'}" class="w-3.5 h-3.5 ${count === total ? 'text-sage-600' : 'text-blush-400'} inline"></i>
+        ${MOTIVATION_QUOTES[count] || MOTIVATION_QUOTES[0]}
+      `;
+
+      lucide.createIcons();
+    }
+
+    /* ==========================================================================
+       ОБРАБОТКА ДЕЙСТВИЙ И ПЕРЕКЛЮЧЕНИЙ
+       ========================================================================== */
+    function toggleItem(pillId) {
+      const selectedKey = getDateKey(currentDate);
+      const dayData = window.appStorage.getDay(selectedKey);
+      const wasChecked = !!(dayData[pillId] && dayData[pillId].completed);
+      const nowChecked = !wasChecked;
+
+      const prevTotal = Object.keys(dayData).length;
+
+      if (nowChecked) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        window.appStorage.setDayItem(selectedKey, pillId, {
+          completed: true,
+          time: timeStr
+        });
+      } else {
+        window.appStorage.setDayItem(selectedKey, pillId, null);
+      }
+
+      const updatedDayData = window.appStorage.getDay(selectedKey);
+      const newTotal = Object.keys(updatedDayData).length;
+
+      if (nowChecked) {
+        if (newTotal === PILL_SCHEDULE.length && prevTotal < PILL_SCHEDULE.length) {
+          triggerConfetti();
+          playCelebrationChord();
+          showToast('Поздравляем! План дня закрыт на 100% 🎉');
+        } else {
+          playCheckChime();
+          showToast(pillId === 'evening_yoga' ? 'Йога отмечена! 🧘‍♀️' : 'Отметка сохранена');
+        }
+      }
+
+      renderPills();
+      renderWeekStrip();
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 65,
+          spread: 70,
+          origin: { y: 0.65 },
+          colors: ['#5F8F6D', '#C8DBD0', '#F5D7D5', '#E5A952', '#9B8166']
+        });
+        setTimeout(() => {
+          confetti({ particleCount: 35, angle: 60, spread: 50, origin: { x: 0 }, colors: ['#A4C3AD', '#FAECEB', '#D6C4AC'] });
+          confetti({ particleCount: 35, angle: 120, spread: 50, origin: { x: 1 }, colors: ['#A4C3AD', '#FAECEB', '#D6C4AC'] });
+        }, 220);
+      }
+    }
+
+    /* Модальное окно сброса дня */
+    function requestResetCurrentDay() {
+      const modal = document.getElementById('confirmResetModal');
+      const content = document.getElementById('confirmResetContent');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-95');
+      content.classList.add('scale-100');
+    }
+
+    function closeConfirmResetModal() {
+      const modal = document.getElementById('confirmResetModal');
+      const content = document.getElementById('confirmResetContent');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-100');
+      content.classList.add('scale-95');
+    }
+
+    function confirmResetCurrentDay() {
+      const selectedKey = getDateKey(currentDate);
+      window.appStorage.clearDay(selectedKey);
+      closeConfirmResetModal();
+      refreshView();
+      showToast('День очищен');
+    }
+
+    /* ==========================================================================
+       ТАЙМЕР ПРАКТИКИ ВЕЧЕРНЕЙ ЙОГИ
+       ========================================================================== */
+    let yogaTimerInterval = null;
+    let yogaTotalSeconds = 15 * 60;
+    let yogaSecondsLeft = 15 * 60;
+    let isYogaTimerRunning = false;
+
+    function openYogaTimer(e) {
+      if (e) e.stopPropagation();
+      const modal = document.getElementById('yogaTimerModal');
+      const content = document.getElementById('yogaModalContent');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-95');
+      content.classList.add('scale-100');
+      selectYogaDuration(15);
+      lucide.createIcons();
+    }
+
+    function closeYogaTimer() {
+      pauseYogaTimer();
+      const modal = document.getElementById('yogaTimerModal');
+      const content = document.getElementById('yogaModalContent');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-100');
+      content.classList.add('scale-95');
+    }
+
+    function selectYogaDuration(minutes) {
+      pauseYogaTimer();
+      yogaTotalSeconds = minutes * 60;
+      yogaSecondsLeft = yogaTotalSeconds;
+      updateYogaTimerDisplay();
+
+      [15, 30, 45].forEach(m => {
+        const btn = document.getElementById(`presetBtn${m}`);
+        if (btn) {
+          if (m === minutes) {
+            btn.className = 'py-2 px-3 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-800 text-xs font-semibold shadow-sm transition active:scale-95';
+          } else {
+            btn.className = 'py-2 px-3 rounded-xl border border-stone-200 text-xs font-medium text-stone-600 transition hover:border-emerald-300 active:scale-95';
+          }
+        }
+      });
+      document.getElementById('yogaTimerStatus').textContent = 'Готово к началу практики';
+    }
+
+    function updateYogaTimerDisplay() {
+      const mins = Math.floor(yogaSecondsLeft / 60);
+      const secs = yogaSecondsLeft % 60;
+      document.getElementById('yogaTimerCountdown').textContent = 
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function toggleYogaTimerPlay() {
+      if (isYogaTimerRunning) pauseYogaTimer();
+      else startYogaTimer();
+    }
+
+    function startYogaTimer() {
+      if (isYogaTimerRunning) return;
+      isYogaTimerRunning = true;
+
+      const playBtn = document.getElementById('yogaPlayBtn');
+      const playText = document.getElementById('yogaPlayText');
+      const playIcon = document.getElementById('yogaPlayIcon');
+
+      playText.textContent = 'Пауза';
+      playIcon.setAttribute('data-lucide', 'pause');
+      playBtn.classList.remove('bg-sage-600', 'hover:bg-sage-700');
+      playBtn.classList.add('bg-stone-700', 'hover:bg-stone-800');
+      document.getElementById('yogaTimerStatus').textContent = 'Практика идет... глубокий вдох 🌿';
+      lucide.createIcons();
+
+      yogaTimerInterval = setInterval(() => {
+        if (yogaSecondsLeft > 0) {
+          yogaSecondsLeft--;
+          updateYogaTimerDisplay();
+        } else {
+          finishYogaTimer();
+        }
+      }, 1000);
+    }
+
+    function pauseYogaTimer() {
+      isYogaTimerRunning = false;
+      clearInterval(yogaTimerInterval);
+
+      const playBtn = document.getElementById('yogaPlayBtn');
+      const playText = document.getElementById('yogaPlayText');
+      const playIcon = document.getElementById('yogaPlayIcon');
+
+      if (playText && playIcon && playBtn) {
+        playText.textContent = 'Продолжить';
+        playIcon.setAttribute('data-lucide', 'play');
+        playBtn.classList.remove('bg-stone-700', 'hover:bg-stone-800');
+        playBtn.classList.add('bg-sage-600', 'hover:bg-sage-700');
+        document.getElementById('yogaTimerStatus').textContent = 'На паузе';
+        lucide.createIcons();
+      }
+    }
+
+    function resetYogaTimer() {
+      pauseYogaTimer();
+      yogaSecondsLeft = yogaTotalSeconds;
+      updateYogaTimerDisplay();
+      document.getElementById('yogaTimerStatus').textContent = 'Сброшено';
+      const playText = document.getElementById('yogaPlayText');
+      if (playText) playText.textContent = 'Начать практику';
+    }
+
+    function finishYogaTimer() {
+      pauseYogaTimer();
+      playGongSound();
+      document.getElementById('yogaTimerStatus').textContent = 'Практика завершена ✨ Намасте';
+      showToast('Практика йоги завершена! Прекрасная работа');
+    }
+
+    function completeYogaFromTimer() {
+      const selectedKey = getDateKey(currentDate);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      window.appStorage.setDayItem(selectedKey, 'evening_yoga', {
+        completed: true,
+        time: timeStr
+      });
+      playGongSound();
+      closeYogaTimer();
+      renderPills();
+      renderWeekStrip();
+
+      const dayData = window.appStorage.getDay(selectedKey);
+      if (Object.keys(dayData).length === PILL_SCHEDULE.length) {
+        triggerConfetti();
+      }
+      showToast('Вечерняя йога отмечена выполненной! 🧘‍♀️');
+    }
+
+    /* ==========================================================================
+       РЕЗЕРВНОЕ КОПИРОВАНИЕ (ЭКСПОРТ И ИМПОРТ JSON)
+       ========================================================================== */
+    function openBackupModal() {
+      const modal = document.getElementById('backupModal');
+      const content = document.getElementById('backupModalContent');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-95');
+      content.classList.add('scale-100');
+    }
+
+    function closeBackupModal() {
+      const modal = document.getElementById('backupModal');
+      const content = document.getElementById('backupModalContent');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      content.classList.remove('scale-100');
+      content.classList.add('scale-95');
+    }
+
+    function exportDataToFile() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appStorage.getAll(), null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `wellness_backup_${getDateKey(new Date())}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Файл бэкапа успешно скачан');
+      closeBackupModal();
+    }
+
+    function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (typeof imported === 'object' && imported !== null) {
+            Object.keys(imported).forEach(dKey => {
+              window.appStorage.mergeFromCloud(dKey, imported[dKey]);
+            });
+            window.appStorage.refreshUI();
+            showToast('Данные успешно восстановлены!');
+            closeBackupModal();
+          } else {
+            showToast('Неверный формат файла');
+          }
+        } catch (err) {
+          showToast('Ошибка при чтении файла');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    /* Тост-уведомление */
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMessage');
+      text.textContent = message;
+
+      toast.classList.remove('opacity-0', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+      }, 2300);
+    }
+
+    /* Инициализация интерфейса */
+    window.addEventListener('DOMContentLoaded', () => {
+      updateSoundButtonUI();
+      refreshView();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
